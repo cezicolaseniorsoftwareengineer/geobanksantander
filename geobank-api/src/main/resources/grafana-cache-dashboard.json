@@ -1,0 +1,232 @@
+{
+    "__comments": "GeoBank cache analytics dashboard. Monitors hit/miss ratio, size, eviction, latency, and health across all cache layers.",
+    "dashboard": {
+        "id": null,
+        "title": "GeoBank Cache Analytics Dashboard",
+        "tags": [
+            "banking",
+            "cache",
+            "performance",
+            "santander"
+        ],
+        "timezone": "browser",
+        "panels": [
+            {
+                "id": 1,
+                "title": "Cache Hit Ratio",
+                "type": "stat",
+                "targets": [
+                    {
+                        "expr": "cache_hit_ratio{cache=\"branch-cache\"}",
+                        "legendFormat": "Branch Cache",
+                        "refId": "A"
+                    },
+                    {
+                        "expr": "cache_hit_ratio{cache=\"config-cache\"}",
+                        "legendFormat": "Config Cache",
+                        "refId": "B"
+                    },
+                    {
+                        "expr": "cache_hit_ratio{cache=\"security-cache\"}",
+                        "legendFormat": "Security Cache",
+                        "refId": "C"
+                    },
+                    {
+                        "expr": "cache_hit_ratio{cache=\"geospatial-cache\"}",
+                        "legendFormat": "Geospatial Cache",
+                        "refId": "D"
+                    }
+                ],
+                "fieldConfig": {
+                    "defaults": {
+                        "unit": "percent",
+                        "min": 0,
+                        "max": 100,
+                        "thresholds": {
+                            "steps": [
+                                {
+                                    "color": "red",
+                                    "value": 0
+                                },
+                                {
+                                    "color": "yellow",
+                                    "value": 70
+                                },
+                                {
+                                    "color": "green",
+                                    "value": 85
+                                }
+                            ]
+                        }
+                    }
+                },
+                "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 0,
+                    "y": 0
+                }
+            },
+            {
+                "id": 2,
+                "title": "Cache Requests Rate",
+                "type": "graph",
+                "targets": [
+                    {
+                        "expr": "rate(cache_requests_total{result=\"hit\"}[5m])",
+                        "legendFormat": "Hit Rate - {{cache}}",
+                        "refId": "A"
+                    },
+                    {
+                        "expr": "rate(cache_requests_total{result=\"miss\"}[5m])",
+                        "legendFormat": "Miss Rate - {{cache}}",
+                        "refId": "B"
+                    }
+                ],
+                "yAxes": [
+                    {
+                        "label": "Requests/sec",
+                        "min": 0
+                    }
+                ],
+                "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 12,
+                    "y": 0
+                }
+            },
+            {
+                "id": 3,
+                "title": "Cache Size",
+                "type": "graph",
+                "targets": [
+                    {
+                        "expr": "cache_size{cache=\"branch-cache\"}",
+                        "legendFormat": "Branch Cache Size",
+                        "refId": "A"
+                    }
+                ],
+                "yAxes": [
+                    {
+                        "label": "Entries",
+                        "min": 0
+                    }
+                ],
+                "gridPos": {
+                    "h": 8,
+                    "w": 8,
+                    "x": 0,
+                    "y": 8
+                }
+            },
+            {
+                "id": 4,
+                "title": "Cache Eviction Rate",
+                "type": "graph",
+                "targets": [
+                    {
+                        "expr": "rate(cache_evictions_total[5m])",
+                        "legendFormat": "Evictions/sec - {{cache}}",
+                        "refId": "A"
+                    }
+                ],
+                "yAxes": [
+                    {
+                        "label": "Evictions/sec",
+                        "min": 0
+                    }
+                ],
+                "gridPos": {
+                    "h": 8,
+                    "w": 8,
+                    "x": 8,
+                    "y": 8
+                }
+            },
+            {
+                "id": 5,
+                "title": "Cache Access Latency",
+                "type": "graph",
+                "targets": [
+                    {
+                        "expr": "histogram_quantile(0.95, rate(cache_access_duration_seconds_bucket[5m]))",
+                        "legendFormat": "P95 Latency - {{cache}}",
+                        "refId": "A"
+                    },
+                    {
+                        "expr": "histogram_quantile(0.99, rate(cache_access_duration_seconds_bucket[5m]))",
+                        "legendFormat": "P99 Latency - {{cache}}",
+                        "refId": "B"
+                    }
+                ],
+                "yAxes": [
+                    {
+                        "label": "Seconds",
+                        "min": 0
+                    }
+                ],
+                "gridPos": {
+                    "h": 8,
+                    "w": 8,
+                    "x": 16,
+                    "y": 8
+                }
+            },
+            {
+                "id": 6,
+                "title": "Banking Cache Health Score",
+                "type": "table",
+                "targets": [
+                    {
+                        "expr": "cache_hit_ratio",
+                        "format": "table",
+                        "refId": "A"
+                    },
+                    {
+                        "expr": "cache_size",
+                        "format": "table",
+                        "refId": "B"
+                    },
+                    {
+                        "expr": "cache_eviction_rate",
+                        "format": "table",
+                        "refId": "C"
+                    }
+                ],
+                "transformations": [
+                    {
+                        "id": "merge",
+                        "options": {}
+                    },
+                    {
+                        "id": "organize",
+                        "options": {
+                            "excludeByName": {},
+                            "indexByName": {},
+                            "renameByName": {
+                                "cache": "Cache Name",
+                                "Value #A": "Hit Ratio (%)",
+                                "Value #B": "Size (Entries)",
+                                "Value #C": "Eviction Rate"
+                            }
+                        }
+                    }
+                ],
+                "gridPos": {
+                    "h": 8,
+                    "w": 24,
+                    "x": 0,
+                    "y": 16
+                }
+            }
+        ],
+        "time": {
+            "from": "now-1h",
+            "to": "now"
+        },
+        "refresh": "5s",
+        "schemaVersion": 30,
+        "version": 1
+    }
+}

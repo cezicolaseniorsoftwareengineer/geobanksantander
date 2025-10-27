@@ -1,0 +1,77 @@
+# GeoBank PostGIS configuration
+
+spring:
+  datasource:
+  # PostGIS JDBC driver
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/geobank?currentSchema=public
+    username: ${DB_USERNAME:geobank_user}
+    password: ${DB_PASSWORD:geobank_password}
+
+  # HikariCP connection pool
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+      leak-detection-threshold: 60000
+  # PostGIS connection properties
+      connection-init-sql: |
+        SET timezone = 'UTC';
+        SET search_path = public, topology;
+        SELECT PostGIS_Version();
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.spatial.dialect.postgis.PostgisPG95Dialect
+        format_sql: true
+        show_sql: false
+        # Spatial indexing configuration
+        jdbc:
+          batch_size: 50
+          order_inserts: true
+          order_updates: true
+        cache:
+          use_second_level_cache: true
+          use_query_cache: true
+          region:
+            factory_class: org.hibernate.cache.caffeine.CaffeineRegionFactory
+
+# GeoBank PostGIS advanced configuration
+geobank:
+  postgis:
+  # Spatial reference system (SIRGAS 2000)
+    srid: 4674
+  # Distance calculation precision (meters)
+    distance-precision: 2
+  # Spatial indexing strategy
+    indexing:
+      gist-enabled: true
+      btree-enabled: true
+  # Automatic spatial index maintenance
+      auto-vacuum: true
+  # Query optimization
+    spatial-queries:
+  # Use spatial indexes for distance calculations
+      force-index-usage: true
+  # Buffer distance for proximity queries (meters)
+      proximity-buffer: 1000
+  # Maximum points for polygon simplification
+      max-polygon-points: 1000
+  # Performance monitoring
+    monitoring:
+  slow-query-threshold: 1000ms
+  log-spatial-operations: true
+  track-index-usage: true
+
+# Logging configuration for spatial operations
+logging:
+  level:
+    org.hibernate.spatial: DEBUG
+    org.postgis: DEBUG
+    com.santander.geobank.infrastructure.persistence: DEBUG
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN

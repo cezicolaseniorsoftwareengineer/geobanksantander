@@ -1,0 +1,115 @@
+# GeoBank production configuration
+
+spring:
+  application:
+    name: geobank-api
+
+  # Database configuration
+  datasource:
+    url: jdbc:h2:mem:geobank;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driverClassName: org.h2.Driver
+    username: sa
+    password: password
+
+  h2:
+    console:
+      enabled: false # Disabled in production
+
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  # Redis configuration
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+  # Cache configuration (fixed timing)
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=1000,expireAfterWrite=5m,recordStats # 5 minutes
+
+  # Security configuration (JWT)
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080/auth
+
+# Management and observability
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+    metrics:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+
+# Application-specific configuration
+geobank:
+  cache:
+    redis:
+      enabled: true
+      prefix: "geobank:"
+    default-ttl: 300 # 5 minutes (300 seconds)
+    max-ttl: 3600   # 1 hour maximum
+    auto-renewal-minutes: 10 # Cache auto-renewal: 10 minutes
+  distance:
+    calculation:
+      algorithm: haversine
+      precision: 2
+  security:
+    jwt:
+      issuer: "geobank-api"
+      access-token-expiry: 15 # 15 minutes
+      refresh-token-expiry: 480 # 8 hours
+      scopes:
+        read: "branch:read"
+        write: "branch:write"
+        admin: "branch:admin"
+  rate-limiting:
+    enabled: true # Enabled for production
+    default:
+      requests-per-minute: 60 # Default limit
+    burst:
+      capacity: 100
+    admin:
+      requests-per-minute: 200
+
+# Logging Configuration - PRODUCTION READY
+logging:
+  level:
+    com.santander.geobank: INFO # Changed from DEBUG
+    org.springframework.security: WARN # Reduced verbosity
+    org.springframework.cache: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{correlationId}] %logger{36} - %msg%n"
+
+# Server Configuration
+server:
+  port: 8080
+  servlet:
+    context-path: /api/v1

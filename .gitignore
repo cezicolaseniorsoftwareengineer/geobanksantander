@@ -1,0 +1,151 @@
+# ======================================
+# GeoBank Santander - Banking Grade .gitignore
+# ======================================
+# Protects sensitive information and ensures only production code is versioned
+
+# ======================================
+# DOCUMENTATION DRAFTS
+# ======================================
+# Internal working documents and architecture blueprints
+GEOBANK_ARCHITECTURE_BLUEPRINT.md
+STACK.md
+HORA_*.md
+STACK_VERIFICATION_REPORT.md
+
+# ======================================
+# IDE CONFIGURATION
+# ======================================
+.vscode/
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# ======================================
+# JAVA BUILD ARTIFACTS
+# ======================================
+target/
+build/
+!**/src/main/**/target/
+!**/src/test/**/target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+
+# ======================================
+# MAVEN
+# ======================================
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# ======================================
+# SPRING BOOT
+# ======================================
+*.original
+spring-shell.log
+
+# ======================================
+# DATABASE
+# ======================================
+*.h2.db
+*.trace.db
+*.lock.db
+
+# ======================================
+# LOGS
+# ======================================
+logs/
+*.log
+*.out
+*.err
+
+# ======================================
+# TEMPORARY FILES
+# ======================================
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# ======================================
+# OS SPECIFIC
+# ======================================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+
+# ======================================
+# SECURITY & CREDENTIALS
+# ======================================
+*.key
+*.pem
+*.p12
+*.jks
+application-local.yml
+application-dev.yml
+application-secrets.yml
+
+# ======================================
+# ENVIRONMENT VARIABLES
+# ======================================
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# ======================================
+# CACHE & PERFORMANCE
+# ======================================
+.cache/
+*.pid
+*.seed
+*.pid.lock
+
+# ======================================
+# TESTING
+# ======================================
+coverage/
+.nyc_output
+test-results/
+allure-results/
+
+# ======================================
+# DOCKER
+# ======================================
+# Keep docker-compose.yml and Dockerfile for production
+# Exclude only local configuration files
+docker-compose.override.yml
+docker-compose.local.yml
+
+# ======================================
+# ALLOWED PRODUCTION FILES
+# ======================================
+# The following files MUST be committed:
+# - src/
+# - pom.xml
+# - docker-compose.yml
+# - Dockerfile
+# - README.md (if production documentation)
+# - application.yml (base configuration)
+# - data.sql (sample data)
+
+# ======================================
+# PROJECT STRUCTURE DOCUMENTATION
+# ======================================
+# File that documents allowed project structure in Git
+!PROJECT_STRUCTURE.md
