@@ -58,7 +58,7 @@ GeoBank enables:
 
 **Backend:**
 
-- Java 17 (LTS) with Spring Boot 3.3.5
+- Java 17 (LTS) with Spring Boot 3.5.6
 - PostgreSQL 16 + PostGIS 3.4 (spatial optimization)
 - Redis 7 (distributed caching with stampede protection)
 - Apache Kafka (event sourcing backbone)
