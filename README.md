@@ -4,7 +4,7 @@
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/cezicolaseniorsoftwareengineer/geobanksantander/actions)
 [![Code Coverage](https://img.shields.io/badge/coverage-85%25-green)](https://codecov.io)
 [![Java](https://img.shields.io/badge/java-17-blue)](https://openjdk.org/)
-[![Spring Boot](https://img.shields.io/badge/spring%20boot-3.3.5-green)](https://spring.io/projects/spring-boot)
+[![Spring Boot](https://img.shields.io/badge/spring%20boot-3.5.6-green)](https://spring.io/projects/spring-boot)
 [![License](https://img.shields.io/badge/license-proprietary-red)](LICENSE)
 
 ## Executive Overview
