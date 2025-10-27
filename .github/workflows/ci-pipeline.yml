@@ -329,11 +329,11 @@ jobs:
                   # Application health
                   curl -f https://api.geobank.santander.com/actuator/health || exit 1
                   echo "SUCCESS: Application health OK"
-                  
+
                   # Database connectivity
                   curl -f https://api.geobank.santander.com/actuator/health/db || exit 1
                   echo "SUCCESS: Database connectivity OK"
-                  
+
                   # Redis connectivity
                   curl -f https://api.geobank.santander.com/actuator/health/redis || exit 1
                   echo "SUCCESS: Redis connectivity OK"            - name: Production smoke tests
@@ -369,16 +369,18 @@ jobs:
                   webhook_url: ${{ secrets.SLACK_WEBHOOK }}
                   text: |
                       **GeoBank Production Deployment Successful**
-                      
+
                       PASS **63 Tests Validated**
                       PASS **Security Scans Passed**
-                      PASS **Health Checks OK**                      📊 **Details:**
+                      PASS **Health Checks OK**
+
+                      **Details:**
                       - Commit: `${{ github.sha }}`
                       - Branch: `${{ github.ref_name }}`
                       - Environment: Production
                       - URL: https://api.geobank.santander.com
 
-                      **Banking platform ready for operations** 🏦
+                      **Banking platform ready for operations**
 
             - name: Notify deployment failure
               if: needs.deploy-production.result == 'failure'
@@ -389,13 +391,13 @@ jobs:
                   webhook_url: ${{ secrets.SLACK_WEBHOOK }}
                   text: |
                       **GeoBank Production Deployment Failed**
-                      
+
                       ERROR **Deployment Error**
                       ROLLBACK **Automatic Rollback Initiated**
-                      
+
                       **Details:**
                       - Commit: `${{ github.sha }}`
                       - Branch: `${{ github.ref_name }}`
                       - Environment: Production
-                      
+
                       **Immediate attention required**

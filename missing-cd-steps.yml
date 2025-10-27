@@ -1,0 +1,66 @@
+deploy-production:
+  name: Deploy to Production
+  runs-on: ubuntu-latest
+  needs: deploy-staging
+  if: github.ref == 'refs/heads/main'
+  environment:
+    name: production
+    url: https://api.geobank.santander.com
+
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Manual approval checkpoint
+      uses: trstringer/manual-approval@v1
+      with:
+        secret: ${{ github.TOKEN }}
+        approvers: cezicolaseniorsoftwareengineer
+        minimum-approvals: 1
+        issue-title: "Deploy GeoBank to Production"
+
+    - name: Deploy to Production Kubernetes
+      uses: azure/k8s-deploy@v4
+      with:
+        manifests: |
+          k8s/production/deployment.yml
+          k8s/production/service.yml
+          k8s/production/configmap.yml
+        images: |
+          santander/geobank:${{ github.sha }}
+        namespace: geobank-production
+
+    - name: Health check after deployment
+      run: |
+        sleep 30
+        curl -f https://api.geobank.santander.com/actuator/health || exit 1
+
+    - name: Run smoke tests
+      working-directory: ./geobank-api
+      run: mvn test -Dtest=SmokeTests -Dspring.profiles.active=production
+
+    - name: Rollback on failure
+      if: failure()
+      uses: azure/k8s-deploy@v4
+      with:
+        action: rollback
+        namespace: geobank-production
+
+notify-completion:
+  name: Notify Deployment Status
+  runs-on: ubuntu-latest
+  needs: [deploy-staging, deploy-production]
+  if: always()
+
+  steps:
+    - name: Notify Slack
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: "#geobank-deployments"
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        text: |
+          GeoBank deployment ${{ job.status }}
+          Commit: ${{ github.sha }}
+          Branch: ${{ github.ref_name }}
+          Environment: ${{ github.event.deployment.environment }}

@@ -34,6 +34,12 @@ spring:
           max-idle: 8
           min-idle: 0
 
+  # Cache configuration
+  cache:
+    type: redis
+    redis:
+      time-to-live: 300000  # 5 minutes in milliseconds
+
 # Application-specific configuration (production)
 geobank:
   cache:

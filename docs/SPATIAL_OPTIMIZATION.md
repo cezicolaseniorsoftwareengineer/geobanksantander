@@ -82,14 +82,14 @@ LIMIT 10;
 
 ### Avoid These Anti-Patterns
 
-❌ **Sequential scan with Haversine**:
+**AVOID: Sequential scan with Haversine**:
 
 ```sql
 SELECT * FROM branches
 ORDER BY (6371 * acos(cos(radians(lat)) * cos(radians(latitude)) ...))
 ```
 
-❌ **No radius filter**:
+**AVOID: No radius filter**:
 
 ```sql
 SELECT * FROM branches ORDER BY geom <-> point LIMIT 10;
