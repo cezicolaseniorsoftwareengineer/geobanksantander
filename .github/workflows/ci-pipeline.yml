@@ -289,10 +289,10 @@ jobs:
 
                       - **Commit**: ${{ github.sha }}
                       - **Branch**: ${{ github.ref_name }}
-                      - **Tests Status**: ✅ 63 tests passing
-                      - **Security Scan**: ✅ Passed
-                      - **Code Quality**: ✅ SonarCloud validated
-                      - **Staging Deploy**: ✅ Successful
+                      - **Tests Status**: PASS - 63 tests passing
+                      - **Security Scan**: PASS - Passed
+                      - **Code Quality**: PASS - SonarCloud validated
+                      - **Staging Deploy**: PASS - Successful
 
                       **Ready for production deployment approval.**
 
@@ -304,10 +304,10 @@ jobs:
                   TEST_COUNT=$(mvn test 2>&1 | grep "Tests run:" | tail -1 | sed 's/.*Tests run: \([0-9]*\).*/\1/')
                   echo "Tests executed: $TEST_COUNT"
                   if [ "$TEST_COUNT" != "63" ]; then
-                    echo "❌ Expected 63 tests, got $TEST_COUNT"
+                    echo "ERROR: Expected 63 tests, got $TEST_COUNT"
                     exit 1
                   fi
-                  echo "✅ All 63 tests validated for production"
+                  echo "SUCCESS: All 63 tests validated for production"
 
             - name: Deploy to Production Kubernetes
               uses: azure/k8s-deploy@v4
@@ -328,22 +328,20 @@ jobs:
 
                   # Application health
                   curl -f https://api.geobank.santander.com/actuator/health || exit 1
-                  echo "✅ Application health OK"
-
+                  echo "SUCCESS: Application health OK"
+                  
                   # Database connectivity
                   curl -f https://api.geobank.santander.com/actuator/health/db || exit 1
-                  echo "✅ Database connectivity OK"
-
+                  echo "SUCCESS: Database connectivity OK"
+                  
                   # Redis connectivity
                   curl -f https://api.geobank.santander.com/actuator/health/redis || exit 1
-                  echo "✅ Redis connectivity OK"
-
-            - name: Production smoke tests
+                  echo "SUCCESS: Redis connectivity OK"            - name: Production smoke tests
               working-directory: ./geobank-api
               run: |
                   echo "=== PRODUCTION SMOKE TESTS ==="
                   mvn test -Dtest=*SmokeTest* -Dspring.profiles.active=production
-                  echo "✅ Production smoke tests passed"
+                  echo "SUCCESS: Production smoke tests passed"
               env:
                   GEOBANK_API_URL: https://api.geobank.santander.com
                   SPRING_PROFILES_ACTIVE: production
@@ -370,13 +368,11 @@ jobs:
                   channel: "#geobank-deployments"
                   webhook_url: ${{ secrets.SLACK_WEBHOOK }}
                   text: |
-                      🚀 **GeoBank Production Deployment Successful**
-
-                      ✅ **63 Tests Validated**
-                      ✅ **Security Scans Passed**
-                      ✅ **Health Checks OK**
-
-                      📊 **Details:**
+                      **GeoBank Production Deployment Successful**
+                      
+                      PASS **63 Tests Validated**
+                      PASS **Security Scans Passed**
+                      PASS **Health Checks OK**                      📊 **Details:**
                       - Commit: `${{ github.sha }}`
                       - Branch: `${{ github.ref_name }}`
                       - Environment: Production
@@ -392,14 +388,14 @@ jobs:
                   channel: "#geobank-deployments"
                   webhook_url: ${{ secrets.SLACK_WEBHOOK }}
                   text: |
-                      🚨 **GeoBank Production Deployment Failed**
-
-                      ❌ **Deployment Error**
-                      🔄 **Automatic Rollback Initiated**
-
-                      📊 **Details:**
+                      **GeoBank Production Deployment Failed**
+                      
+                      ERROR **Deployment Error**
+                      ROLLBACK **Automatic Rollback Initiated**
+                      
+                      **Details:**
                       - Commit: `${{ github.sha }}`
                       - Branch: `${{ github.ref_name }}`
                       - Environment: Production
-
-                      **Immediate attention required** ⚠️
+                      
+                      **Immediate attention required**
