@@ -244,3 +244,162 @@ jobs:
                   images: |
                       santander/geobank:${{ github.sha }}
                   namespace: geobank-staging
+
+            - name: Run staging health checks
+              run: |
+                  sleep 30
+                  curl -f https://staging.geobank.santander.com/actuator/health || exit 1
+
+            - name: Execute full test suite (63 tests)
+              working-directory: ./geobank-api
+              run: mvn test -Dspring.profiles.active=staging
+              env:
+                  SPRING_DATASOURCE_URL: ${{ secrets.STAGING_DB_URL }}
+                  SPRING_DATA_REDIS_HOST: ${{ secrets.STAGING_REDIS_HOST }}
+
+    deploy-production:
+        name: Deploy to Production
+        runs-on: ubuntu-latest
+        needs: deploy-staging
+        if: github.ref == 'refs/heads/main'
+        environment:
+            name: production
+            url: https://api.geobank.santander.com
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Set up JDK 17
+              uses: actions/setup-java@v4
+              with:
+                  java-version: ${{ env.JAVA_VERSION }}
+                  distribution: "temurin"
+                  cache: "maven"
+
+            - name: Manual approval checkpoint
+              uses: trstringer/manual-approval@v1
+              with:
+                  secret: ${{ github.TOKEN }}
+                  approvers: cezicolaseniorsoftwareengineer
+                  minimum-approvals: 1
+                  issue-title: "Deploy GeoBank to Production - 63 Tests Validated"
+                  issue-body: |
+                      **Deployment Request**
+
+                      - **Commit**: ${{ github.sha }}
+                      - **Branch**: ${{ github.ref_name }}
+                      - **Tests Status**: ✅ 63 tests passing
+                      - **Security Scan**: ✅ Passed
+                      - **Code Quality**: ✅ SonarCloud validated
+                      - **Staging Deploy**: ✅ Successful
+
+                      **Ready for production deployment approval.**
+
+            - name: Pre-production test validation
+              working-directory: ./geobank-api
+              run: |
+                  echo "=== VALIDATING 63 TESTS BEFORE PRODUCTION ==="
+                  mvn test
+                  TEST_COUNT=$(mvn test 2>&1 | grep "Tests run:" | tail -1 | sed 's/.*Tests run: \([0-9]*\).*/\1/')
+                  echo "Tests executed: $TEST_COUNT"
+                  if [ "$TEST_COUNT" != "63" ]; then
+                    echo "❌ Expected 63 tests, got $TEST_COUNT"
+                    exit 1
+                  fi
+                  echo "✅ All 63 tests validated for production"
+
+            - name: Deploy to Production Kubernetes
+              uses: azure/k8s-deploy@v4
+              with:
+                  manifests: |
+                      k8s/production/deployment.yml
+                      k8s/production/service.yml
+                      k8s/production/configmap.yml
+                      k8s/production/secret.yml
+                  images: |
+                      santander/geobank:${{ github.sha }}
+                  namespace: geobank-production
+
+            - name: Production health checks
+              run: |
+                  echo "=== PRODUCTION HEALTH VALIDATION ==="
+                  sleep 45
+
+                  # Application health
+                  curl -f https://api.geobank.santander.com/actuator/health || exit 1
+                  echo "✅ Application health OK"
+
+                  # Database connectivity
+                  curl -f https://api.geobank.santander.com/actuator/health/db || exit 1
+                  echo "✅ Database connectivity OK"
+
+                  # Redis connectivity
+                  curl -f https://api.geobank.santander.com/actuator/health/redis || exit 1
+                  echo "✅ Redis connectivity OK"
+
+            - name: Production smoke tests
+              working-directory: ./geobank-api
+              run: |
+                  echo "=== PRODUCTION SMOKE TESTS ==="
+                  mvn test -Dtest=*SmokeTest* -Dspring.profiles.active=production
+                  echo "✅ Production smoke tests passed"
+              env:
+                  GEOBANK_API_URL: https://api.geobank.santander.com
+                  SPRING_PROFILES_ACTIVE: production
+
+            - name: Rollback on failure
+              if: failure()
+              uses: azure/k8s-deploy@v4
+              with:
+                  action: rollback
+                  namespace: geobank-production
+
+    notify-deployment:
+        name: Notify Deployment Status
+        runs-on: ubuntu-latest
+        needs: [deploy-staging, deploy-production]
+        if: always()
+
+        steps:
+            - name: Notify deployment success
+              if: needs.deploy-production.result == 'success'
+              uses: 8398a7/action-slack@v3
+              with:
+                  status: success
+                  channel: "#geobank-deployments"
+                  webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+                  text: |
+                      🚀 **GeoBank Production Deployment Successful**
+
+                      ✅ **63 Tests Validated**
+                      ✅ **Security Scans Passed**
+                      ✅ **Health Checks OK**
+
+                      📊 **Details:**
+                      - Commit: `${{ github.sha }}`
+                      - Branch: `${{ github.ref_name }}`
+                      - Environment: Production
+                      - URL: https://api.geobank.santander.com
+
+                      **Banking platform ready for operations** 🏦
+
+            - name: Notify deployment failure
+              if: needs.deploy-production.result == 'failure'
+              uses: 8398a7/action-slack@v3
+              with:
+                  status: failure
+                  channel: "#geobank-deployments"
+                  webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+                  text: |
+                      🚨 **GeoBank Production Deployment Failed**
+
+                      ❌ **Deployment Error**
+                      🔄 **Automatic Rollback Initiated**
+
+                      📊 **Details:**
+                      - Commit: `${{ github.sha }}`
+                      - Branch: `${{ github.ref_name }}`
+                      - Environment: Production
+
+                      **Immediate attention required** ⚠️
