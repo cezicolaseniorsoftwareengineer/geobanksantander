@@ -95,7 +95,6 @@ $RECYCLE.BIN/
 *.p12
 *.jks
 application-local.yml
-application-dev.yml
 application-secrets.yml
 
 # ======================================

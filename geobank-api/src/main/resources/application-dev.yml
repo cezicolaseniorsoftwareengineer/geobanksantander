@@ -1,0 +1,84 @@
+# GeoBank development configuration (without Redis)
+
+spring:
+  application:
+    name: geobank-api
+
+  # Database configuration (H2 for development)
+  datasource:
+    url: jdbc:h2:mem:geobank;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driverClassName: org.h2.Driver
+    username: sa
+    password: password
+
+  h2:
+    console:
+      enabled: true # Enabled for development
+      path: /h2-console
+
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  # Cache configuration (Caffeine only, no Redis)
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=1000,expireAfterWrite=5m,recordStats
+
+# Application-specific configuration (development)
+geobank:
+  cache:
+    redis:
+      enabled: false # Disable Redis for development
+    default-ttl: 300
+    max-ttl: 3600
+    auto-renewal-minutes: 10
+  distance:
+    calculation:
+      algorithm: haversine
+      precision: 2
+  security:
+    jwt:
+      issuer: "geobank-api-dev"
+      access-token-expiry: 60 # 1 hour for development
+      refresh-token-expiry: 1440 # 24 hours
+  rate-limiting:
+    enabled: false # Disabled for development
+
+# Management and observability (development)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,caches,env
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+      environment: development
+
+# Logging Configuration - DEVELOPMENT
+logging:
+  level:
+    com.santander.geobank: DEBUG
+    org.springframework.cache: DEBUG
+    org.springframework.security: DEBUG
+    SECURITY_AUDIT: DEBUG
+    AUDIT_TRAIL: DEBUG
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level [%X{correlationId}] %logger{36} - %msg%n"
+
+# Server Configuration
+server:
+  port: 8080
+  servlet:
+    context-path: /api/v1
