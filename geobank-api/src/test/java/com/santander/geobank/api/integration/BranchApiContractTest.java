@@ -1,9 +1,15 @@
 package com.santander.geobank.api.integration;
 
-import com.santander.geobank.api.dto.BranchDTO;
-import com.santander.geobank.api.dto.ProximitySearchRequest;
-import io.restassured.RestAssured;
-import io.restassured.http.ContentType;
+import static org.hamcrest.Matchers.anyOf;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.everyItem;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasEntry;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.lessThanOrEqualTo;
+import static org.hamcrest.Matchers.notNullValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -11,8 +17,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.ActiveProfiles;
 
+import io.restassured.RestAssured;
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.*;
+import io.restassured.http.ContentType;
 
 /**
  * Contract tests for GeoBank API endpoints.
@@ -80,11 +87,10 @@ class BranchApiContractTest {
     @DisplayName("Contract: POST /branches/proximity returns nearby branches")
     void shouldReturnNearbyBranches() {
         ProximitySearchRequest request = new ProximitySearchRequest(
-                -23.550520,  // São Paulo coordinates
+                -23.550520, // São Paulo coordinates
                 -46.633308,
                 10.0,
-                5
-        );
+                5);
 
         given()
                 .contentType(ContentType.JSON)
@@ -160,11 +166,10 @@ class BranchApiContractTest {
     @DisplayName("Contract: POST /branches/proximity validates request body")
     void shouldValidateProximitySearchRequest() {
         ProximitySearchRequest invalidRequest = new ProximitySearchRequest(
-                -91.0,  // Invalid latitude
+                -91.0, // Invalid latitude
                 -46.633308,
                 10.0,
-                5
-        );
+                5);
 
         given()
                 .contentType(ContentType.JSON)
@@ -217,7 +222,7 @@ class BranchApiContractTest {
                 .then()
                 .statusCode(anyOf(is(200), is(404)))
                 .contentType(ContentType.JSON);
-                // If 404, should have error structure with message and timestamp
+        // If 404, should have error structure with message and timestamp
     }
 
     @Test
@@ -248,7 +253,7 @@ class BranchApiContractTest {
     @DisplayName("Contract: POST /branches validates required fields")
     void shouldValidateRequiredFieldsOnCreate() {
         BranchDTO invalidBranch = BranchDTO.builder()
-                .name("")  // Empty name
+                .name("") // Empty name
                 .build();
 
         given()

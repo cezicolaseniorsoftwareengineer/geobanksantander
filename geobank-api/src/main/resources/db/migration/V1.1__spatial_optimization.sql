@@ -10,55 +10,55 @@
 CREATE EXTENSION IF NOT EXISTS postgis;
 
 -- Add geometry column for optimized spatial operations
-ALTER TABLE branches 
+ALTER TABLE branches
 ADD COLUMN IF NOT EXISTS geom GEOMETRY(POINT, 4326);
 
 -- Populate geometry column from existing lat/lon
-UPDATE branches 
+UPDATE branches
 SET geom = ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)
 WHERE geom IS NULL;
 
 -- Create spatial index using GIST (Generalized Search Tree)
 -- This dramatically improves proximity queries from O(n) to O(log n)
-CREATE INDEX IF NOT EXISTS idx_branches_geom_gist 
+CREATE INDEX IF NOT EXISTS idx_branches_geom_gist
 ON branches USING GIST(geom);
 
 -- Create covering index for common query patterns
 -- Includes frequently accessed columns to avoid table lookups
-CREATE INDEX IF NOT EXISTS idx_branches_geom_status_type 
-ON branches USING GIST(geom) 
+CREATE INDEX IF NOT EXISTS idx_branches_geom_status_type
+ON branches USING GIST(geom)
 INCLUDE (branch_name, branch_code, city_name, state_code);
 
 -- Add functional index for distance calculations
 -- Pre-computes geography cast for faster distance operations
-CREATE INDEX IF NOT EXISTS idx_branches_geog 
+CREATE INDEX IF NOT EXISTS idx_branches_geog
 ON branches USING GIST(CAST(geom AS geography));
 
 -- Create partial index for active branches only
 -- Reduces index size and improves query speed for active branch lookups
-CREATE INDEX IF NOT EXISTS idx_branches_active_geom 
+CREATE INDEX IF NOT EXISTS idx_branches_active_geom
 ON branches USING GIST(geom)
 WHERE status = 'ACTIVE';
 
 -- Add B-tree indexes for non-spatial filtering
-CREATE INDEX IF NOT EXISTS idx_branches_status 
-ON branches(status) 
+CREATE INDEX IF NOT EXISTS idx_branches_status
+ON branches(status)
 WHERE status = 'ACTIVE';
 
-CREATE INDEX IF NOT EXISTS idx_branches_type 
+CREATE INDEX IF NOT EXISTS idx_branches_type
 ON branches(type);
 
-CREATE INDEX IF NOT EXISTS idx_branches_created_at 
+CREATE INDEX IF NOT EXISTS idx_branches_created_at
 ON branches(created_at DESC);
 
 -- Create composite index for common filter combinations
-CREATE INDEX IF NOT EXISTS idx_branches_type_status 
-ON branches(type, status) 
+CREATE INDEX IF NOT EXISTS idx_branches_type_status
+ON branches(type, status)
 WHERE status = 'ACTIVE';
 
 -- Add constraint to ensure geometry consistency
-ALTER TABLE branches 
-ADD CONSTRAINT IF NOT EXISTS check_geom_not_null 
+ALTER TABLE branches
+ADD CONSTRAINT IF NOT EXISTS check_geom_not_null
 CHECK (geom IS NOT NULL);
 
 -- Create trigger to auto-update geometry on lat/lon changes
@@ -79,7 +79,7 @@ CREATE TRIGGER trigger_update_branch_geometry
 
 -- Create materialized view for branch density analysis
 CREATE MATERIALIZED VIEW IF NOT EXISTS branch_density_grid AS
-SELECT 
+SELECT
     ST_SnapToGrid(geom, 0.1) AS grid_cell,
     COUNT(*) AS branch_count,
     ARRAY_AGG(branch_id) AS branch_ids,
@@ -89,7 +89,7 @@ FROM branches
 WHERE status = 'ACTIVE'
 GROUP BY grid_cell;
 
-CREATE INDEX IF NOT EXISTS idx_branch_density_grid 
+CREATE INDEX IF NOT EXISTS idx_branch_density_grid
 ON branch_density_grid USING GIST(grid_cell);
 
 -- Create function for optimized proximity search
@@ -108,7 +108,7 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         b.branch_id,
         b.branch_name,
         ROUND(
@@ -121,7 +121,7 @@ BEGIN
         b.latitude,
         b.longitude
     FROM branches b
-    WHERE 
+    WHERE
         b.status = 'ACTIVE'
         AND ST_DWithin(
             b.geom::geography,
@@ -150,18 +150,18 @@ RETURNS TABLE (
 BEGIN
     RETURN QUERY
     WITH grid AS (
-        SELECT 
+        SELECT
             generate_series(min_lat, max_lat, grid_size) AS lat,
             generate_series(min_lon, max_lon, grid_size) AS lon
     ),
     grid_points AS (
-        SELECT 
+        SELECT
             lat,
             lon,
             ST_SetSRID(ST_MakePoint(lon, lat), 4326) AS point
         FROM grid
     )
-    SELECT 
+    SELECT
         gp.lat AS cell_lat,
         gp.lon AS cell_lon,
         COUNT(b.branch_id) AS branch_count,
@@ -172,7 +172,7 @@ BEGIN
             ) / 1000.0
         ), 2) AS avg_distance_km
     FROM grid_points gp
-    LEFT JOIN branches b ON 
+    LEFT JOIN branches b ON
         b.status = 'ACTIVE'
         AND ST_DWithin(
             gp.point::geography,
@@ -196,14 +196,14 @@ ANALYZE branches;
 
 -- Performance verification query
 -- Expected: sub-10ms for proximity search within 10km radius
-EXPLAIN (ANALYZE, BUFFERS) 
-SELECT branch_id, branch_name, 
-       ST_Distance(geom::geography, 
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT branch_id, branch_name,
+       ST_Distance(geom::geography,
                    ST_SetSRID(ST_MakePoint(-46.633308, -23.550520), 4326)::geography) / 1000.0 AS distance_km
 FROM branches
 WHERE status = 'ACTIVE'
-  AND ST_DWithin(geom::geography, 
-                 ST_SetSRID(ST_MakePoint(-46.633308, -23.550520), 4326)::geography, 
+  AND ST_DWithin(geom::geography,
+                 ST_SetSRID(ST_MakePoint(-46.633308, -23.550520), 4326)::geography,
                  10000)
 ORDER BY geom <-> ST_SetSRID(ST_MakePoint(-46.633308, -23.550520), 4326)
 LIMIT 10;
@@ -217,7 +217,7 @@ LIMIT 10;
 --   - Query cost: ~2000 units
 --
 -- After optimization:
---   - Proximity search: <10ms for 10,000 branches  
+--   - Proximity search: <10ms for 10,000 branches
 --   - Index scan with GIST
 --   - Query cost: ~50 units
 --

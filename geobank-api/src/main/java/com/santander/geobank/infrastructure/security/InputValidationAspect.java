@@ -1,7 +1,8 @@
 package com.santander.geobank.infrastructure.security;
 
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validator;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -9,8 +10,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.util.Set;
-import java.util.stream.Collectors;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 
 /**
  * Input Validation Aspect for banking-grade data validation.
@@ -87,7 +88,8 @@ public class InputValidationAspect {
 
         // Check for SQL injection patterns
         if (containsSqlInjectionPattern(stringValue)) {
-            securityLogger.error("SQL_INJECTION_ATTEMPT | context: {} | value: {}", context, maskSensitiveData(stringValue));
+            securityLogger.error("SQL_INJECTION_ATTEMPT | context: {} | value: {}", context,
+                    maskSensitiveData(stringValue));
             throw new SecurityException("Potential SQL injection detected");
         }
 
@@ -99,13 +101,15 @@ public class InputValidationAspect {
 
         // Check for path traversal patterns
         if (containsPathTraversalPattern(stringValue)) {
-            securityLogger.error("PATH_TRAVERSAL_ATTEMPT | context: {} | value: {}", context, maskSensitiveData(stringValue));
+            securityLogger.error("PATH_TRAVERSAL_ATTEMPT | context: {} | value: {}", context,
+                    maskSensitiveData(stringValue));
             throw new SecurityException("Potential path traversal detected");
         }
 
         // Check for command injection patterns
         if (containsCommandInjectionPattern(stringValue)) {
-            securityLogger.error("COMMAND_INJECTION_ATTEMPT | context: {} | value: {}", context, maskSensitiveData(stringValue));
+            securityLogger.error("COMMAND_INJECTION_ATTEMPT | context: {} | value: {}", context,
+                    maskSensitiveData(stringValue));
             throw new SecurityException("Potential command injection detected");
         }
     }
@@ -122,8 +126,9 @@ public class InputValidationAspect {
      * Detect SQL injection patterns.
      */
     private boolean containsSqlInjectionPattern(String value) {
-        if (value == null) return false;
-        
+        if (value == null)
+            return false;
+
         String lowerValue = value.toLowerCase();
         return lowerValue.contains("' or '1'='1") ||
                 lowerValue.contains("' or 1=1") ||
@@ -143,8 +148,9 @@ public class InputValidationAspect {
      * Detect XSS patterns.
      */
     private boolean containsXssPattern(String value) {
-        if (value == null) return false;
-        
+        if (value == null)
+            return false;
+
         String lowerValue = value.toLowerCase();
         return lowerValue.contains("<script") ||
                 lowerValue.contains("javascript:") ||
@@ -159,8 +165,9 @@ public class InputValidationAspect {
      * Detect path traversal patterns.
      */
     private boolean containsPathTraversalPattern(String value) {
-        if (value == null) return false;
-        
+        if (value == null)
+            return false;
+
         return value.contains("../") ||
                 value.contains("..\\") ||
                 value.contains("%2e%2e/") ||
@@ -171,8 +178,9 @@ public class InputValidationAspect {
      * Detect command injection patterns.
      */
     private boolean containsCommandInjectionPattern(String value) {
-        if (value == null) return false;
-        
+        if (value == null)
+            return false;
+
         String lowerValue = value.toLowerCase();
         return lowerValue.contains(";") && (lowerValue.contains("rm ") || lowerValue.contains("del ")) ||
                 lowerValue.contains("&&") ||
