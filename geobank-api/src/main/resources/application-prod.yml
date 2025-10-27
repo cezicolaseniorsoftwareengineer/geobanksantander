@@ -1,0 +1,67 @@
+# GeoBank production configuration (with Redis)
+
+spring:
+  # Database configuration (PostgreSQL for production)
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:geobank}
+    username: ${DB_USERNAME:geobank_user}
+    password: ${DB_PASSWORD:geobank_password}
+    driverClassName: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 20000
+
+  jpa:
+    database-platform: org.hibernate.spatial.dialect.postgis.PostgisPG95Dialect
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  # Redis configuration (enabled for production)
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+# Application-specific configuration (production)
+geobank:
+  cache:
+    redis:
+      enabled: true # Enable Redis for production
+      prefix: "geobank:prod:"
+    default-ttl: 300
+    max-ttl: 3600
+    auto-renewal-minutes: 10
+  security:
+    jwt:
+      issuer: "geobank-api-prod"
+      access-token-expiry: 15 # 15 minutes for production
+      refresh-token-expiry: 480 # 8 hours
+  rate-limiting:
+    enabled: true # Enable rate limiting for production
+    default:
+      requests-per-minute: 60
+
+# Logging Configuration - PRODUCTION
+logging:
+  level:
+    com.santander.geobank: INFO
+    org.springframework.security: WARN
+    org.springframework.cache: INFO
+    SECURITY_AUDIT: INFO
+    AUDIT_TRAIL: INFO
+  file:
+    name: logs/geobank-prod.log
+    max-size: 10MB
+    max-history: 30

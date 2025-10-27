@@ -36,7 +36,6 @@ import jakarta.validation.Validator;
 @Component
 public class InputValidationAspect {
 
-    private static final Logger logger = LoggerFactory.getLogger(InputValidationAspect.class);
     private static final Logger securityLogger = LoggerFactory.getLogger("SECURITY_AUDIT");
 
     private final Validator validator;

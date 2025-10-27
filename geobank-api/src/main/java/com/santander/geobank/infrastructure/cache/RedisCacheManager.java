@@ -14,6 +14,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -47,6 +48,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * @since 1.0.0
  */
 @Component
+@ConditionalOnBean(RedisTemplate.class)
 public class RedisCacheManager {
 
     private static final Logger logger = LoggerFactory.getLogger(RedisCacheManager.class);

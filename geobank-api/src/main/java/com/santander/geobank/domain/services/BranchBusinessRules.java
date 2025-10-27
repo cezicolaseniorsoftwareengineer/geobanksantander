@@ -28,8 +28,6 @@ import com.santander.geobank.domain.model.BranchType;
  */
 public class BranchBusinessRules {
 
-    private static final int MIN_OPERATIONAL_HOURS = 4;
-    private static final int MAX_OPERATIONAL_HOURS = 24;
     private static final double MIN_BRANCH_DISTANCE_KM = 0.5; // Minimum distance between branches
 
     /**
@@ -60,9 +58,13 @@ public class BranchBusinessRules {
 
         // Rule 2: Validate branch type for location density
         long nearbyBranches = countBranchesInRadius(newBranch, existingBranches, 5.0);
-        if (nearbyBranches >= 10 && newBranch.getType() == BranchType.TRADITIONAL) {
-            return ValidationResult.failure(
-                    "Area is saturated. Consider ATM or express branch instead.");
+        if (nearbyBranches >= 10) {
+            // Area is saturated - only allow ATM or Express branches
+            if (newBranch.getType() == BranchType.TRADITIONAL ||
+                    newBranch.getType() == BranchType.PREMIUM) {
+                return ValidationResult.failure(
+                        "Area is saturated. Consider ATM or express branch instead.");
+            }
         }
 
         return ValidationResult.success();
@@ -101,6 +103,11 @@ public class BranchBusinessRules {
         if (populationDensity < 100) {
             // Rural area - ATM sufficient
             return BranchType.ATM_ONLY;
+        }
+
+        if (nearbyBranchCount >= 3 && populationDensity < 200) {
+            // Medium density with competition - express services
+            return BranchType.EXPRESS;
         }
 
         if (nearbyBranchCount >= 5) {

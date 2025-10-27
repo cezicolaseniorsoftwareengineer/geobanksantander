@@ -7,12 +7,15 @@ import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.santander.geobank.domain.events.DomainEvent;
+import com.santander.geobank.domain.ports.DomainEventPublisher;
 
 /**
  * Event Publisher for banking-grade event sourcing and audit trail.
@@ -41,7 +44,8 @@ import com.santander.geobank.domain.events.DomainEvent;
  * @since 1.0.0
  */
 @Service
-public class EventPublisher {
+@ConditionalOnBean(KafkaTemplate.class)
+public class EventPublisher implements DomainEventPublisher {
 
     private static final Logger logger = LoggerFactory.getLogger(EventPublisher.class);
     private static final Logger auditLogger = LoggerFactory.getLogger("AUDIT_TRAIL");
@@ -60,7 +64,7 @@ public class EventPublisher {
     /**
      * Publish domain event to event store for audit and replication.
      */
-    public <T extends DomainEvent> CompletableFuture<Void> publish(T event) {
+    public <T extends DomainEvent> CompletableFuture<Void> publishDomainEvent(T event) {
         try {
             enrichEventMetadata(event);
             String eventJson = serializeEvent(event);
@@ -87,6 +91,23 @@ public class EventPublisher {
         }
     }
 
+    // Implementation of DomainEventPublisher interface
+    @Override
+    public void publish(Object event) {
+        if (event instanceof DomainEvent) {
+            publishDomainEvent((DomainEvent) event);
+        } else {
+            logger.warn("Attempted to publish non-domain event: {}", event.getClass().getSimpleName());
+        }
+    }
+
+    @Override
+    public void publishAll(Object... events) {
+        for (Object event : events) {
+            publish(event);
+        }
+    }
+
     /**
      * Publish audit event for compliance monitoring.
      */
@@ -109,8 +130,8 @@ public class EventPublisher {
             auditLogger.info("AUDIT_EVENT | type: {} | user: {} | action: {} | correlation: {}",
                     eventType, userId, action, auditEvent.getCorrelationId());
 
-        } catch (Exception e) {
-            logger.error("Audit event publishing failed", e);
+        } catch (JsonProcessingException e) {
+            logger.error("Audit event publishing failed - JSON serialization error", e);
         }
     }
 
@@ -172,6 +193,10 @@ public class EventPublisher {
         private Instant timestamp;
         private String correlationId;
         private String sourceIp;
+
+        public String getCorrelationId() {
+            return correlationId;
+        }
 
         public static Builder builder() {
             return new Builder();

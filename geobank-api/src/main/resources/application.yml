@@ -90,7 +90,7 @@ management:
 geobank:
   cache:
     redis:
-      enabled: true
+      enabled: false # Disabled by default, enable in production profiles
       prefix: "geobank:"
     default-ttl: 300 # 5 minutes (300 seconds)
     max-ttl: 3600   # 1 hour maximum

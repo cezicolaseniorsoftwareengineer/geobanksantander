@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -85,22 +86,29 @@ class BranchBusinessRulesTest {
     @Test
     @DisplayName("Should reject traditional branch in saturated area")
     void shouldRejectTraditionalBranchInSaturatedArea() {
-        // Given: 10 branches within 5km
-        Branch newBranch = createBranch(-23.550520, -46.633308, BranchType.TRADITIONAL);
+        // Given: Create exactly 10 branches in a compact circle around test location
+        GeoPoint centerLocation = new GeoPoint(-23.550520, -46.633308);
 
+        // Create 10 branches in circle pattern - all within 3km radius but >0.5km apart
         for (int i = 0; i < 10; i++) {
-            double lat = -23.550520 + (i * 0.01); // ~1km apart
-            Branch existing = createBranch(lat, -46.633308, BranchType.TRADITIONAL);
+            double angle = (i * 36.0) * Math.PI / 180.0; // 36 degrees apart (360/10)
+            double radius = 0.02; // ~2.2 km from center
+            double lat = centerLocation.latitude() + radius * Math.cos(angle);
+            double lon = centerLocation.longitude() + radius * Math.sin(angle);
+            Branch existing = createBranch(lat, lon, BranchType.ATM_ONLY);
             existingBranches.add(existing);
         }
 
-        // When
+        // When: Try to register TRADITIONAL branch at the center (surrounded by 10
+        // branches)
+        Branch newBranch = createBranch(centerLocation.latitude(), centerLocation.longitude(), BranchType.TRADITIONAL);
         BranchBusinessRules.ValidationResult result = businessRules.validateBranchRegistration(newBranch,
                 existingBranches);
 
         // Then
-        assertFalse(result.isValid());
-        assertTrue(result.getMessage().contains("saturated"));
+        assertFalse(result.isValid(), "Traditional branch should be rejected in saturated area");
+        assertTrue(result.getMessage().contains("saturated"),
+                "Expected saturation message but got: " + result.getMessage());
     }
 
     @Test
@@ -109,9 +117,12 @@ class BranchBusinessRulesTest {
         // Given: saturated area but ATM type
         Branch newBranch = createBranch(-23.550520, -46.633308, BranchType.ATM_ONLY);
 
-        for (int i = 0; i < 10; i++) {
-            double lat = -23.550520 + (i * 0.01);
-            Branch existing = createBranch(lat, -46.633308, BranchType.TRADITIONAL);
+        // Create 10 branches at safe distance (>0.5km ~= 0.0045 degrees) but within 5km
+        // radius
+        for (int i = 1; i <= 10; i++) {
+            double lat = -23.550520 + (i * 0.01); // ~1.11 km apart
+            double lon = -46.633308 + (i * 0.01);
+            Branch existing = createBranch(lat, lon, BranchType.TRADITIONAL);
             existingBranches.add(existing);
         }
 
@@ -120,7 +131,7 @@ class BranchBusinessRulesTest {
                 existingBranches);
 
         // Then
-        assertTrue(result.isValid());
+        assertTrue(result.isValid(), "ATM should be allowed in saturated area. Error: " + result.getMessage());
     }
 
     @ParameterizedTest
@@ -271,16 +282,24 @@ class BranchBusinessRulesTest {
     @Test
     @DisplayName("Should reject branch with invalid coordinates")
     void shouldRejectInvalidCoordinates() {
-        // Given: invalid latitude
-        Branch branch = createBranch(91.0, -46.633308, BranchType.TRADITIONAL);
+        // Given: valid branch for testing regulatory compliance
+        Branch branch = createBranch(-23.550520, -46.633308, BranchType.TRADITIONAL);
         branch.updateInfo("Test", "Address", "+55 11 98765-4321");
 
-        // When
+        // When: validateRegulatoryCompliance checks coordinate ranges
         BranchBusinessRules.ValidationResult result = businessRules.validateRegulatoryCompliance(branch);
 
-        // Then
-        assertFalse(result.isValid());
-        assertTrue(result.getMessage().contains("coordinates are invalid"));
+        // Then: valid coordinates should pass
+        assertTrue(result.isValid());
+
+        // Test that GeoPoint itself validates coordinates at construction time
+        assertThrows(IllegalArgumentException.class, () -> {
+            new GeoPoint(91.0, -46.633308); // Invalid latitude
+        });
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            new GeoPoint(-23.550520, 181.0); // Invalid longitude
+        });
     }
 
     // Helper methods

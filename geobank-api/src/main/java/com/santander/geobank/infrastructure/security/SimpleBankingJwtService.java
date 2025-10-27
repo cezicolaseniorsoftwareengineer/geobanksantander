@@ -1,6 +1,5 @@
 package com.santander.geobank.infrastructure.security;
 
-import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
@@ -36,13 +35,10 @@ public class SimpleBankingJwtService {
     private static final String AUDIENCE = "banking-operations";
     private static final int TOKEN_EXPIRY_MINUTES = 15; // Banking standard
 
-    private final SecureRandom secureRandom;
-
     @Value("${geobank.jwt.secret:default-banking-secret-2024}")
     private String jwtSecret;
 
     public SimpleBankingJwtService() {
-        this.secureRandom = new SecureRandom();
     }
 
     /**
@@ -109,7 +105,7 @@ public class SimpleBankingJwtService {
             // Extract username from payload (simplified JSON parsing)
             return extractJsonValue(payload, "sub");
 
-        } catch (Exception e) {
+        } catch (IllegalArgumentException | ArrayIndexOutOfBoundsException e) {
             logger.error("Failed to extract username from banking token", e);
             throw new IllegalArgumentException("Invalid token format");
         }
@@ -131,7 +127,7 @@ public class SimpleBankingJwtService {
             String authStr = extractJsonValue(payload, "authorities");
             return Set.of(authStr.split(","));
 
-        } catch (Exception e) {
+        } catch (IllegalArgumentException | ArrayIndexOutOfBoundsException e) {
             logger.error("Failed to extract authorities from banking token", e);
             return Set.of();
         }
@@ -172,7 +168,7 @@ public class SimpleBankingJwtService {
             long expiry = Long.parseLong(extractJsonValue(payload, "exp"));
             return Instant.now().isAfter(Instant.ofEpochSecond(expiry));
 
-        } catch (Exception e) {
+        } catch (IllegalArgumentException | ArrayIndexOutOfBoundsException e) {
             logger.error("Failed to check token expiry", e);
             return true; // Fail-safe: treat as expired
         }
@@ -226,4 +222,3 @@ public class SimpleBankingJwtService {
         return json.substring(start, end);
     }
 }
-
